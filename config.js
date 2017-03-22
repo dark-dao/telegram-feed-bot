@@ -2,7 +2,7 @@
 
 var config = {
   token: "",
-  main_url: "",
+  projects_url: "",
   shop_url: "",
   users_id: [
 

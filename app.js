@@ -6,7 +6,7 @@ var fs = require("fs");
 var config = require('./config');
 
 var token = config.token;
-var main_url = config.main_url;
+var projects_url = config.projects_url;
 var shop_url = config.shop_url;
 var chatIds = config.users_id;
 
@@ -20,7 +20,7 @@ var request = require("request");
 var cheerio = require("cheerio");
 var CronJob = require('cron').CronJob;
 
-var mainPageText = "";
+var projectsPageText = "";
 var shopPageText = "";
 var ERROR_MESSAGE = "";
 
@@ -33,37 +33,35 @@ var telegramSendMessage = function(message_text) {
 
 try {
   var job = new CronJob({
-    cronTime: '0 */2 * * * *',
+    cronTime: '0 */5 10-23 * * *',
     onTick: function() {
       console.log('<- TICK ->');
 
-      /*--- Request to MAIN page ---*/
-      request(main_url, function (error, response, body) {
+      /*--- Request to PROJECTS page ---*/
+      request(projects_url, function (error, response, body) {
         var date = new Date();
-        if (!error) {
-          console.log('<- LOAD_MAIN_PAGE ->');
+        if(!error) {
+          console.log('<- LOAD_SHOP_PAGE ->');
 
           var $ = cheerio.load(body);
-          var elemHref = $("dl#ic_recentposts > dt > strong > a");
-          var elemTime = $("dl#ic_recentposts > dd");
+          var elemText = $("div#messageindex > table > tbody > tr > td > div > span > a");
           var items = "";
 
-          _.map(elemHref, (val, i) => {
-            var head = $(val).text();
-            var href = $(val).attr('href');
-            var time = $(elemTime[i]).text();
-            items += "\n" + time + "\n" + head + "\n" + href + "\n";
+          _.map(elemText, val => {
+            var text = $(val).text();
+            var href = $(val).attr("href");
+            items += text + '\n' + href + '\n';
           });
 
-          if(mainPageText !== items) {
+          if(projectsPageText !== items) {
             console.log('<- SEND_MESSAGE ->');
             ERROR_MESSAGE = "";
-            mainPageText = items;
-            telegramSendMessage(mainPageText);
+            projectsPageText = items;
+            telegramSendMessage(projectsPageText);
           }
         } else {
           console.log("Произошла ошибка: " + error);
-          ERROR_MESSAGE = "Ошибка загрузки страницы: " + main_url +  "\n" + error + "\n" + date.toTimeString() + "\n";
+          ERROR_MESSAGE = "Ошибка загрузки страницы: " + shop_url +  "\n" + error + "\n" + date.toTimeString() + "\n";
           fs.appendFile("errors-log.txt", ERROR_MESSAGE,  "utf-8");
           telegramSendMessage(error);
         }
@@ -144,7 +142,7 @@ bot.on('message', function (msg) {
 
   if(messageText == "/stop_cron_process") {
     bot.sendMessage(chatId, "Остановка расписания (cron) . . . \n", {caption: "I'm a bot!"});
-    mainPageText = "";
+    projectsPageText = "";
     shopPageText = "";
     ERROR_MESSAGE = "";
     job.stop();
